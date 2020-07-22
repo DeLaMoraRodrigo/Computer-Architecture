@@ -6,6 +6,8 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
 
 class CPU:
     """Main CPU class."""
@@ -15,6 +17,15 @@ class CPU:
         self.pc = 0
         self.reg = [0] * 8
         self.ram = [0] * 256
+        self.sp = 7
+        # self.sp = 0
+        self.branchtable = {}
+        self.branchtable[HLT] = self.handle_HLT
+        self.branchtable[LDI] = self.handle_LDI
+        self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[MUL] = self.handle_MUL
+        self.branchtable[PUSH] = self.handle_PUSH
+        self.branchtable[POP] = self.handle_POP
 
     def ram_read(self, MAR):
         """Reads and returns value stored in address"""
@@ -48,12 +59,13 @@ class CPU:
         with open(sys.argv[1]) as f:
             for line in f:
                 # print(line.split("#")[0].strip())
-                str_line = line.split("#")[0].strip()
-                if str_line == '':
-                    continue
-                byte = int(str_line, 2)
-                self.ram[address] = byte
-                address += 1
+                try:
+                    str_line = line.split("#")[0]
+                    byte = int(str_line, 2)
+                    self.ram[address] = byte
+                    address += 1
+                except:
+                    pass
 
 
     def alu(self, op, reg_a, reg_b):
@@ -88,31 +100,131 @@ class CPU:
 
         print()
 
+    def handle_HLT(self):
+        sys.exit()
+
+    def handle_LDI(self, operand_a, operand_b):
+        self.reg[operand_a] = operand_b
+        self.pc += 3
+
+    def handle_PRN(self, operand_a):
+        print(f"{self.reg[operand_a]} \n")
+        self.pc += 2
+
+    def handle_MUL(self, operand_a, operand_b):
+        self.alu("MUL", operand_a, operand_b)
+        self.pc += 3
+
+    def handle_PUSH(self, operand_a):
+        # print("PUSHING INITIATED")
+        # print(f"REGISTER: {self.reg}")
+        # print(f"RAM: {self.ram}")
+        # print(f"OLD STACK POINTER IN REGISTER: {self.reg[self.sp]}")
+        # # self.sp -= 1
+        # self.reg[self.sp] -= 1
+        # print(f"NEW STACK POINTER IN REGISTER: {self.reg[self.sp]}")
+        # value = self.reg[operand_a]
+        # pointer = self.reg[self.sp]
+        # print(f"PUSHING REGISTER {operand_a} TO RAM AT INDEX {self.reg[self.sp]}")
+        # self.ram[pointer] = value
+        # print(f"NEW VALUE: {value} IN RAM AT INDEX {self.reg[self.sp]} \n")
+        # self.pc += 2
+
+        # self.sp = 7. Increment/Decrement self.reg[self.sp]
+        self.reg[self.sp] -= 1
+        pointer = self.reg[self.sp]
+        value = self.reg[operand_a]
+        self.ram[pointer] = value
+        self.pc += 2
+
+        # self.sp = 0. Increment/Decrement self.sp
+        # self.sp -= 1
+        # value = self.reg[operand_a]
+        # self.ram[self.sp] = value
+        # self.pc += 2
+
+    def handle_POP(self, operand_a):
+        # print("POPPING INITIATED")
+        # print(f"REGISTER: {self.reg}")
+        # print(f"RAM: {self.ram}")
+        # pointer = self.reg[self.sp]
+        # value = self.ram[pointer]
+        # print(f"OLD STACK POINTER IN REGISTER: {self.reg[self.sp]}")
+        # print(f"POPPING INDEX {self.reg[self.sp]} IN RAM, INTO REGISTER {operand_a}")
+        # self.reg[operand_a] = value
+        # print(f"NEW VALUE: {self.reg[operand_a]} AT REGISTER {operand_a}")
+        # self.reg[self.sp] += 1
+        # # self.sp += 1
+        # print(f"NEW STACK POINTER IN REGISTER: {self.reg[self.sp]} \n")
+        # self.pc += 2
+
+        # self.sp = 7. Increment/Decrement self.reg[self.sp]
+        pointer = self.reg[self.sp]
+        value = self.ram[pointer]
+        self.reg[operand_a] = value
+        self.reg[self.sp] += 1
+        self.pc += 2
+
+        # self.sp = 0. Increment/Decrement self.sp
+        # value = self.ram[self.sp]
+        # self.reg[operand_a] = value
+        # self.sp += 1
+        # self.pc += 2
+
     def run(self):
         """Run the CPU."""
-        running = True
+        # running = True
         
+        # while running:
+        #     IR = self.ram_read(self.pc)
+        #     operand_a = self.ram_read(self.pc + 1)
+        #     operand_b = self.ram_read(self.pc + 2)
+
+        #     if IR == HLT:
+        #         print("HALTING")
+        #         running = False
+        #     elif IR == LDI:
+        #         print(f"LDI ADDRESS: {operand_a} VALUE: {operand_b}")
+        #         self.reg[operand_a] = operand_b
+        #         self.pc += 3
+        #     elif IR == PRN:
+        #         print("PRINTING")
+        #         print(self.reg[operand_a])
+        #         self.pc += 2
+        #     elif IR == MUL:
+        #         print("MULTIPLYING")
+        #         self.alu("MUL", operand_a, operand_b)
+        #         self.pc += 3
+        #     else:
+        #         print(f"INVALID INSTRUCTION {IR}")
+        #         running = False
+
+        running = True
+
         while running:
             IR = self.ram_read(self.pc)
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
 
             if IR == HLT:
-                print("HALTING")
-                running = False
+                # print("HALTING")
+                self.branchtable[HLT]()
             elif IR == LDI:
-                print(f"LDI ADDRESS: {operand_a} VALUE: {operand_b}")
-                self.reg[operand_a] = operand_b
-                self.pc += 3
+                # print(f"LDI REGISTER: {operand_a} VALUE: {operand_b} \n")
+                self.branchtable[LDI](operand_a, operand_b)
             elif IR == PRN:
-                print("PRINTING")
-                print(self.reg[operand_a])
-                self.pc += 2
+                # print("PRINTING")
+                self.branchtable[PRN](operand_a)
             elif IR == MUL:
-                print("MULTIPLYING")
-                self.alu("MUL", operand_a, operand_b)
-                self.pc += 3
+                # print("MULTIPLYING")
+                self.branchtable[MUL](operand_a, operand_b)
+            elif IR == PUSH:
+                # print("PUSHING")
+                self.branchtable[PUSH](operand_a)
+            elif IR == POP:
+                # print("POPPING")
+                self.branchtable[POP](operand_a)
             else:
                 print(f"INVALID INSTRUCTION {IR}")
                 running = False
-                
+            
