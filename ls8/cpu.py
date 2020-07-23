@@ -5,9 +5,13 @@ import sys
 HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
+ADD = 0b10100000
+SUB = 0b10100001
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
 
 class CPU:
     """Main CPU class."""
@@ -23,9 +27,13 @@ class CPU:
         self.branchtable[HLT] = self.handle_HLT
         self.branchtable[LDI] = self.handle_LDI
         self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[ADD] = self.handle_ADD
+        self.branchtable[SUB] = self.handle_SUB
         self.branchtable[MUL] = self.handle_MUL
         self.branchtable[PUSH] = self.handle_PUSH
         self.branchtable[POP] = self.handle_POP
+        self.branchtable[CALL] = self.handle_CALL
+        self.branchtable[RET] = self.handle_RET
 
     def ram_read(self, MAR):
         """Reads and returns value stored in address"""
@@ -39,22 +47,6 @@ class CPU:
         """Load a program into memory."""
 
         address = 0
-
-        # For now, we've just hardcoded a program:
-
-        # program = [
-        #     # From print8.ls8
-        #     0b10000010, # LDI R0,8
-        #     0b00000000,
-        #     0b00001000,
-        #     0b01000111, # PRN R0
-        #     0b00000000,
-        #     0b00000001, # HLT
-        # ]
-
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
 
         with open(sys.argv[1]) as f:
             for line in f:
@@ -110,6 +102,14 @@ class CPU:
     def handle_PRN(self, operand_a):
         print(f"{self.reg[operand_a]} \n")
         self.pc += 2
+
+    def handle_ADD(self, operand_a, operand_b):
+        self.alu("ADD", operand_a, operand_b)
+        self.pc += 3
+
+    def handle_SUB(self, operand_a, operand_b):
+        self.alu("SUB", operand_a, operand_b)
+        self.pc += 3
 
     def handle_MUL(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
@@ -171,34 +171,24 @@ class CPU:
         # self.sp += 1
         # self.pc += 2
 
+    def handle_CALL(self, operand_a):
+        return_address = self.pc + 2
+
+        self.reg[self.sp] -= 1
+        pointer = self.reg[self.sp]
+        self.ram[pointer] = return_address
+
+        subroutine = self.reg[operand_a]
+        self.pc = subroutine        
+
+    def handle_RET(self):
+        pointer = self.reg[self.sp]
+        return_address = self.ram[pointer]
+        self.reg[self.sp] += 1
+
+        self.pc = return_address
+
     def run(self):
-        """Run the CPU."""
-        # running = True
-        
-        # while running:
-        #     IR = self.ram_read(self.pc)
-        #     operand_a = self.ram_read(self.pc + 1)
-        #     operand_b = self.ram_read(self.pc + 2)
-
-        #     if IR == HLT:
-        #         print("HALTING")
-        #         running = False
-        #     elif IR == LDI:
-        #         print(f"LDI ADDRESS: {operand_a} VALUE: {operand_b}")
-        #         self.reg[operand_a] = operand_b
-        #         self.pc += 3
-        #     elif IR == PRN:
-        #         print("PRINTING")
-        #         print(self.reg[operand_a])
-        #         self.pc += 2
-        #     elif IR == MUL:
-        #         print("MULTIPLYING")
-        #         self.alu("MUL", operand_a, operand_b)
-        #         self.pc += 3
-        #     else:
-        #         print(f"INVALID INSTRUCTION {IR}")
-        #         running = False
-
         running = True
 
         while running:
@@ -215,6 +205,12 @@ class CPU:
             elif IR == PRN:
                 # print("PRINTING")
                 self.branchtable[PRN](operand_a)
+            elif IR == ADD:
+                # print("ADDING")
+                self.branchtable[ADD](operand_a, operand_b)
+            elif IR == SUB:
+                # print("SUBTRACTING")
+                self.branchtable[SUB](operand_a, operand_b)
             elif IR == MUL:
                 # print("MULTIPLYING")
                 self.branchtable[MUL](operand_a, operand_b)
@@ -224,7 +220,13 @@ class CPU:
             elif IR == POP:
                 # print("POPPING")
                 self.branchtable[POP](operand_a)
+            elif IR == CALL:
+                # print("CALLING")
+                self.branchtable[CALL](operand_a)
+            elif IR == RET:
+                # print("RETURNING")
+                self.branchtable[RET]()
             else:
-                print(f"INVALID INSTRUCTION {IR}")
+                print(f"INVALID INSTRUCTION {bin(IR)}")
                 running = False
             
