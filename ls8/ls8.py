@@ -5,6 +5,14 @@
 import sys
 from cpu import *
 
+# print(sys.argv)
+if len(sys.argv) == 2:
+    filename = sys.argv[1]
+else:
+    print("usage: ls8.py filename")
+    sys.exit()
+print("\nFILENAME:",filename, "\n")
+
 cpu = CPU()
 
 cpu.load()
