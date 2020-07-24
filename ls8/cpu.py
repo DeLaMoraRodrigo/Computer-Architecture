@@ -96,20 +96,6 @@ class CPU:
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
-        elif op == "CMP":
-            if self.reg[reg_a] == self.reg[reg_b]:
-                self.fl[7] = 1
-            else:
-                self.fl[7] = 0
-            if self.reg[reg_a] < self.reg[reg_b]:
-                self.fl[5] = 1
-            else:
-                self.fl[5] = 0
-            if self.reg[reg_a] > self.reg[reg_b]:
-                self.fl[6] = 1
-            else:
-                self.fl[6] = 0
-            print(f"EQUAL FLAG   : {self.fl[7]}\nLESS FLAG    : {self.fl[5]}\nGREATER FLAG : {self.fl[6]}\n")
         elif op == "AND":
             self.reg[reg_a] = self.reg[reg_a] & self.reg[reg_b]
         elif op == "OR":
@@ -128,6 +114,20 @@ class CPU:
                 sys.exit()
             else:
                 self.reg[reg_a] = self.reg[reg_a] % self.reg[reg_b]
+        elif op == "CMP":
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.fl[7] = 1
+            else:
+                self.fl[7] = 0
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.fl[5] = 1
+            else:
+                self.fl[5] = 0
+            if self.reg[reg_a] > self.reg[reg_b]:
+                self.fl[6] = 1
+            else:
+                self.fl[6] = 0
+            print(f"EQUAL FLAG   : {self.fl[7]}\nLESS FLAG    : {self.fl[5]}\nGREATER FLAG : {self.fl[6]}\n")
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -159,7 +159,7 @@ class CPU:
         self.pc += 3
 
     def handle_ST(self, operand_a, operand_b):
-        self.ram[operand_a] = operand_b
+        self.ram[self.reg[operand_a]] = self.reg[operand_b]
         self.pc += 3
 
     def handle_PRN(self, operand_a):
