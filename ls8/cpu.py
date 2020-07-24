@@ -124,7 +124,7 @@ class CPU:
             self.reg[reg_a] = self.reg[reg_a] >> self.reg[reg_b]
         elif op == "MOD":
             if self.reg[reg_b] == 0:
-                raise Exception("Cannot divide by 0")
+                print("Cannot divide by 0")
                 sys.exit()
             else:
                 self.reg[reg_a] = self.reg[reg_a] % self.reg[reg_b]
