@@ -2,16 +2,22 @@
 
 import sys
 
-HLT = 0b00000001
-LDI = 0b10000010
-PRN = 0b01000111
-ADD = 0b10100000
-SUB = 0b10100001
-MUL = 0b10100010
+HLT  = 0b00000001
+LDI  = 0b10000010
+ST   = 0b10000100
+PRN  = 0b01000111
+PRA  = 0b01001000
+ADD  = 0b10100000
+SUB  = 0b10100001
+MUL  = 0b10100010
+CMP  = 0b10100111
+JEQ  = 0b01010101
+JNE  = 0b01010110
 PUSH = 0b01000101
-POP = 0b01000110
+POP  = 0b01000110
 CALL = 0b01010000
-RET = 0b00010001
+RET  = 0b00010001
+JMP  = 0b01010100
 
 class CPU:
     """Main CPU class."""
@@ -26,14 +32,20 @@ class CPU:
         self.branchtable = {}
         self.branchtable[HLT] = self.handle_HLT
         self.branchtable[LDI] = self.handle_LDI
+        self.branchtable[ST] = self.handle_ST
         self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[PRA] = self.handle_PRA
         self.branchtable[ADD] = self.handle_ADD
         self.branchtable[SUB] = self.handle_SUB
         self.branchtable[MUL] = self.handle_MUL
+        self.branchtable[CMP] = self.handle_CMP
+        self.branchtable[JEQ] = self.handle_JEQ
+        self.branchtable[JNE] = self.handle_JNE
         self.branchtable[PUSH] = self.handle_PUSH
         self.branchtable[POP] = self.handle_POP
         self.branchtable[CALL] = self.handle_CALL
         self.branchtable[RET] = self.handle_RET
+        self.branchtable[JMP] = self.handle_JMP
 
     def ram_read(self, MAR):
         """Reads and returns value stored in address"""
@@ -69,6 +81,20 @@ class CPU:
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.E = 1
+            else:
+                self.E = 0
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.L = 1
+            else:
+                self.L = 0
+            if self.reg[reg_a] > self.reg[reg_b]:
+                self.G = 1
+            else:
+                self.G = 0
+            print(f"SELF.E: {self.E}\nSELF.L: {self.L}\nSELF.G: {self.G}\n")
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -99,8 +125,16 @@ class CPU:
         self.reg[operand_a] = operand_b
         self.pc += 3
 
+    def handle_ST(self, operand_a, operand_b):
+        self.ram[operand_a] = operand_b
+        self.pc += 3
+
     def handle_PRN(self, operand_a):
         print(f"{self.reg[operand_a]} \n")
+        self.pc += 2
+
+    def handle_PRA(self, operand_a):
+        print(ord(self.reg[operand_a]))
         self.pc += 2
 
     def handle_ADD(self, operand_a, operand_b):
@@ -114,6 +148,26 @@ class CPU:
     def handle_MUL(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
         self.pc += 3
+
+    def handle_CMP(self, operand_a, operand_b):
+        self.alu("CMP", operand_a, operand_b)
+        self.pc += 3
+
+    def handle_JEQ(self, operand_a):
+        if self.E:
+            print("JEQ-ING TO", self.reg[operand_a], "\n")
+            self.pc = self.reg[operand_a]
+        else:
+            print("JEQ NOTHING HAPPENED\n")
+            self.pc += 2
+
+    def handle_JNE(self, operand_a):
+        if not self.E:
+            print("JNE-ING TO", self.reg[operand_a], "\n")
+            self.pc = self.reg[operand_a]
+        else:
+            print("JNE NOTHING HAPPENED\n")
+            self.pc += 2
 
     def handle_PUSH(self, operand_a):
         # print("PUSHING INITIATED")
@@ -188,6 +242,13 @@ class CPU:
 
         self.pc = return_address
 
+    def handle_JMP(self, operand_a):
+        try:
+            self.pc = self.reg[operand_a]
+        except:
+            print("STACK OVERFLOW")
+            sys.exit()
+
     def run(self):
         running = True
 
@@ -197,14 +258,20 @@ class CPU:
             operand_b = self.ram_read(self.pc + 2)
 
             if IR == HLT:
-                # print("HALTING")
+                print("HALTING")
                 self.branchtable[HLT]()
             elif IR == LDI:
-                # print(f"LDI REGISTER: {operand_a} VALUE: {operand_b} \n")
+                print(f"LDI REGISTER: {operand_a} VALUE: {operand_b} \n")
                 self.branchtable[LDI](operand_a, operand_b)
+            elif IR == ST:
+                print("ST-ING")
+                self.branchtable[ST](operand_a, operand_b)
             elif IR == PRN:
-                # print("PRINTING")
+                print("PRINTING")
                 self.branchtable[PRN](operand_a)
+            elif IR == PRA:
+                print("PRANTING")
+                self.branchtable[PRA](operand_a)
             elif IR == ADD:
                 # print("ADDING")
                 self.branchtable[ADD](operand_a, operand_b)
@@ -214,6 +281,15 @@ class CPU:
             elif IR == MUL:
                 # print("MULTIPLYING")
                 self.branchtable[MUL](operand_a, operand_b)
+            elif IR == CMP:
+                print(f"COMPARING {self.reg[operand_a]} WITH {self.reg[operand_b]}")
+                self.branchtable[CMP](operand_a, operand_b)
+            elif IR == JEQ:
+                print("JEQ-ING")
+                self.branchtable[JEQ](operand_a)
+            elif IR == JNE:
+                print("JNE-ING")
+                self.branchtable[JNE](operand_a)
             elif IR == PUSH:
                 # print("PUSHING")
                 self.branchtable[PUSH](operand_a)
@@ -226,6 +302,9 @@ class CPU:
             elif IR == RET:
                 # print("RETURNING")
                 self.branchtable[RET]()
+            elif IR == JMP:
+                print("JUMPING")
+                self.branchtable[JMP](operand_a)
             else:
                 print(f"INVALID INSTRUCTION {bin(IR)}")
                 running = False
